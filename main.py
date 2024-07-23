@@ -14,6 +14,14 @@ from sqlalchemy.orm import relationship
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_mail import Mail, Message
 from dotenv import load_dotenv
+from flask import Flask, render_template, redirect, url_for, request, flash
+from flask_uploads import UploadSet, configure_uploads, IMAGES
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField, FileField
+from wtforms.validators import DataRequired
+from flask_wtf.file import FileAllowed, FileRequired
+from werkzeug.utils import secure_filename
+from werkzeug.datastructures import  FileStorage
 # Import your forms from the forms.py
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, ContactForm
 
@@ -43,16 +51,18 @@ app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-
+app.config['UPLOADED_PHOTOS_DEST'] = 'uploads'
 
 # Configure Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 mail = Mail(app)
+
+photos = UploadSet('photos', IMAGES)
+configure_uploads(app, photos)
 @login_manager.user_loader
 def load_user(user_id):
     return db.get_or_404(User, user_id)
-
 
 # For adding profile images to the comment section
 gravatar = Gravatar(app,
@@ -71,6 +81,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
+class UploadPhotoForm(FlaskForm):
+    title = StringField("Photo Title", validators=[DataRequired()])
+    photo = FileField("Photo", validators=[FileRequired(), FileAllowed(['jpg', 'png', 'jpeg'], 'Images only!')])
+    submit = SubmitField("Upload Photo")
 
 
 # CONFIGURE TABLES
@@ -318,6 +332,22 @@ def contact():
         flash('Message sent successfully!')
         return redirect(url_for('contact'))
     return render_template('contact.html', form=form, msg_sent=False)
+
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_photo():
+    form = UploadPhotoForm()
+    if form.validate_on_submit():
+        filename = photos.save(form.photo.data)
+        flash('Photo uploaded successfully!', 'success')
+        return redirect(url_for('upload_photo'))
+    return render_template('upload.html', form=form)
+@app.route('/photos')
+def display_photos():
+    photo_urls = [f'static/uploads/{filename}' for filename in os.listdir(app.config['UPLOADED_PHOTOS_DEST'])]
+    return render_template('photos.html', photos=photo_urls)
+
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)

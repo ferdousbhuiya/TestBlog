@@ -5,6 +5,10 @@ from wtforms import StringField, TextAreaField, SubmitField
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Email
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField, FileField
+from wtforms.validators import DataRequired
+from flask_wtf.file import FileAllowed, FileRequired
 
 
 # WTForm for creating a blog post
@@ -44,3 +48,9 @@ class ContactForm(FlaskForm):
     phone = StringField("Phone", validators=[DataRequired()])
     message = TextAreaField("Message", validators=[DataRequired()])
     submit = SubmitField("Send")
+
+
+class UploadPhotoForm(FlaskForm):
+    title = StringField("Photo Title", validators=[DataRequired()])
+    photo = FileField("Photo", validators=[FileRequired(), FileAllowed(['jpg', 'png', 'jpeg'], 'Images only!')])
+    submit = SubmitField("Upload Photo")
